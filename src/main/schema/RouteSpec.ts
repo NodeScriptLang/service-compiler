@@ -8,7 +8,7 @@ export interface RouteSpec {
     path: string;
     matchPrefix: boolean;
     middleware: boolean;
-    moduleUrl: string;
+    moduleRef: string;
 }
 
 export const RouteSpecSchema = new Schema<RouteSpec>({
@@ -20,6 +20,6 @@ export const RouteSpecSchema = new Schema<RouteSpec>({
         path: { type: 'string' },
         matchPrefix: { type: 'boolean' },
         middleware: { type: 'boolean' },
-        moduleUrl: { type: 'string' },
+        moduleRef: { type: 'string' },
     }
 });

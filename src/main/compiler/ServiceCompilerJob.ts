@@ -34,11 +34,12 @@ export class ServiceCompilerJob {
 
     private emitImports() {
         for (const route of this.sortedRoutes) {
-            const { moduleUrl } = route;
-            const key = `module:${moduleUrl}`;
-            const sym = this.symtable.get(key, '') ?? this.symtable.nextSym('m1');
-            this.symtable.set(key, sym);
-            this.code.line(`import { compute as ${sym} } from '${moduleUrl}'`);
+            // TODO resolve moduleUrl with loader
+            // const { moduleUrl } = route;
+            // const key = `module:${moduleUrl}`;
+            // const sym = this.symtable.get(key, '') ?? this.symtable.nextSym('m1');
+            // this.symtable.set(key, sym);
+            // this.code.line(`import { compute as ${sym} } from '${moduleUrl}'`);
         }
     }
 
