@@ -1,4 +1,5 @@
 import { CodeBuilder, SymTable } from '@nodescript/core/compiler';
+import { ModuleLoader } from '@nodescript/core/runtime';
 
 import { ServiceSpec } from '../index.js';
 import { RouteSpec } from '../schema/RouteSpec.js';
@@ -11,7 +12,10 @@ export class ServiceCompilerJob {
 
     private sortedRoutes: RouteSpec[] = [];
 
-    constructor(readonly serviceSpec: ServiceSpec) {
+    constructor(
+        readonly loader: ModuleLoader,
+        readonly serviceSpec: ServiceSpec,
+    ) {
         this.sortedRoutes = this.serviceSpec.routes.slice().sort((a, b) => {
             if (a.priority === b.priority) {
                 return a.path < b.path ? -1 : 1;
@@ -34,12 +38,11 @@ export class ServiceCompilerJob {
 
     private emitImports() {
         for (const route of this.sortedRoutes) {
-            // TODO resolve moduleUrl with loader
-            // const { moduleUrl } = route;
-            // const key = `module:${moduleUrl}`;
-            // const sym = this.symtable.get(key, '') ?? this.symtable.nextSym('m1');
-            // this.symtable.set(key, sym);
-            // this.code.line(`import { compute as ${sym} } from '${moduleUrl}'`);
+            const computeUrl = this.loader.resolveComputeUrl(route.moduleRef);
+            const key = `module:${computeUrl}`;
+            const sym = this.symtable.get(key, '') ?? this.symtable.nextSym('m1');
+            this.symtable.set(key, sym);
+            this.code.line(`import { compute as ${sym} } from '${computeUrl}'`);
         }
     }
 

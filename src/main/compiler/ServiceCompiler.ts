@@ -1,3 +1,5 @@
+import { ModuleLoader } from '@nodescript/core/runtime';
+
 import { ServiceSpec } from '../schema/ServiceSpec.js';
 import { ServiceCompilerJob } from './ServiceCompilerJob.js';
 
@@ -7,8 +9,17 @@ export interface ServiceCompilerResult {
 
 export class ServiceCompiler {
 
-    async compile(serviceSpec: ServiceSpec) {
-        const job = new ServiceCompilerJob(serviceSpec);
+    constructor(
+        readonly loader: ModuleLoader,
+    ) {}
+
+    async compile(
+        serviceSpec: ServiceSpec,
+    ) {
+        for (const { moduleRef } of serviceSpec.routes) {
+            await this.loader.loadModule(moduleRef);
+        }
+        const job = new ServiceCompilerJob(this.loader, serviceSpec);
         job.run();
         return {
             code: job.getEmittedCode(),
