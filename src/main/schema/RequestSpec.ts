@@ -1,5 +1,7 @@
-import { HttpDict } from './HttpDict.js';
-import { RequestMethod } from './RequestMethod.js';
+import { Schema } from 'airtight';
+
+import { HttpDict, HttpDictSchema } from './HttpDict.js';
+import { RequestMethod, RequestMethodSchema } from './RequestMethod.js';
 
 export interface RequestSpec {
     method: RequestMethod;
@@ -8,3 +10,15 @@ export interface RequestSpec {
     headers: HttpDict;
     body: any;
 }
+
+export const RequestSpecSchema = new Schema<RequestSpec>({
+    id: 'RequestSpec',
+    type: 'object',
+    properties: {
+        method: RequestMethodSchema.schema,
+        path: { type: 'string' },
+        query: HttpDictSchema.schema,
+        headers: HttpDictSchema.schema,
+        body: { type: 'any' },
+    },
+});
