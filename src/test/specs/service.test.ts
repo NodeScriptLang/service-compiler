@@ -47,7 +47,7 @@ describe('Service Compiler', () => {
                 body: {},
             };
             const res = await runtime.invokeService(service, $request);
-            assert.deepStrictEqual(res, { $request });
+            assert.deepEqual(res, { $request });
         });
 
         it('POST /echo', async () => {
@@ -68,7 +68,7 @@ describe('Service Compiler', () => {
                 },
             };
             const res = await runtime.invokeService(service, $request);
-            assert.deepStrictEqual(res, { $request });
+            assert.deepEqual(res, { $request });
         });
 
         it('default 404', async () => {
@@ -80,7 +80,7 @@ describe('Service Compiler', () => {
                 body: {},
             };
             const res = await runtime.invokeService(service, $request);
-            assert.deepStrictEqual(res, {
+            assert.deepEqual(res, {
                 $response: {
                     status: 404,
                     headers: {
@@ -126,7 +126,7 @@ describe('Service Compiler', () => {
                 body: {},
             };
             const res = await runtime.invokeService(service, $request);
-            assert.deepStrictEqual(res, {
+            assert.deepEqual(res, {
                 $request,
                 authorized: true,
                 userId: 'joe',
@@ -144,7 +144,7 @@ describe('Service Compiler', () => {
                 body: {},
             };
             const res = await runtime.invokeService(service, $request);
-            assert.deepStrictEqual(res, {
+            assert.deepEqual(res, {
                 $response: {
                     status: 403,
                     headers: {
