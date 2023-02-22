@@ -6,7 +6,6 @@ export interface RouteSpec {
     priority: number;
     method: RouteMethod;
     path: string;
-    matchPrefix: boolean;
     middleware: boolean;
     moduleRef: string;
 }
@@ -18,7 +17,6 @@ export const RouteSpecSchema = new Schema<RouteSpec>({
         priority: { type: 'number', default: 0 },
         method: RouteMethodSchema.schema,
         path: { type: 'string' },
-        matchPrefix: { type: 'boolean' },
         middleware: { type: 'boolean' },
         moduleRef: { type: 'string' },
     }

@@ -1,4 +1,3 @@
-import { GraphEvalContext } from '@nodescript/core/runtime';
 import { ModuleDefinition } from '@nodescript/core/types';
 
 export const module: ModuleDefinition = {
@@ -10,8 +9,6 @@ export const module: ModuleDefinition = {
     }
 };
 
-export const compute = (params: any, ctx: GraphEvalContext) => {
-    return {
-        params,
-    };
+export const compute = (params: any) => {
+    return params;
 };

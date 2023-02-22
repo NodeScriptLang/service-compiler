@@ -1,3 +1,9 @@
+import { FsModuleLoader } from '@nodescript/core/fs';
+import { GraphEvalContext } from '@nodescript/core/runtime';
+import { evalEsmModule } from '@nodescript/core/util';
+
+import { RequestSpec, ServiceCompiler, ServiceSpec } from '../main/index.js';
+
 /**
  * Test runtime utilities.
  * It has to be identical for each test case.
@@ -11,9 +17,28 @@ export class TestRuntime {
         return `http://127.0.0.1:${this.httpPort}${path}`;
     }
 
-    makeModuleUrl(moduleRef: string) {
-        return this.makeUrl(`/out/test/modules/${moduleRef}.js`);
+    createLoader() {
+        const loader = new FsModuleLoader('./out/test/modules');
+        return loader;
     }
+
+    async invokeService(
+        serviceSpec: ServiceSpec,
+        $request: RequestSpec,
+        $variables: Record<string, string> = {},
+    ) {
+        const loader = runtime.createLoader();
+        const compiler = new ServiceCompiler(loader);
+        const { code } = await compiler.compile(serviceSpec);
+        const { compute } = await evalEsmModule(code);
+        const ctx = new GraphEvalContext();
+        const res = await compute({
+            $request,
+            $variables,
+        }, ctx);
+        return res;
+    }
+
 }
 
 export const runtime = new TestRuntime();
