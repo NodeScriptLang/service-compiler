@@ -77,7 +77,9 @@ export class ServiceCompilerJob {
             this.code.line(`const pathParams = ctx.lib.matchPath(${JSON.stringify(route.path)}, $request.path);`);
             this.code.block(`if (pathParams != null) {`, `}`, () => {
                 // Assemble the parameters
-                this.code.line(`const $p = ctx.convertType({ $request, ...$variables, ...$state }, ${JSON.stringify(paramsSchema)})`);
+                this.code.line(`let $p = ctx.convertType({
+                    $request, ...$variables, ...$state, ...$request.body, ...$request.query, ...pathParams
+                }, ${JSON.stringify(paramsSchema)})`);
                 this.code.block(`try {`, `}`, () => {
                     // Invoke the module
                     this.code.line(`const $r = await ${sym}($p, ctx.newScope());`);
