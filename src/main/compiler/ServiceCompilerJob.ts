@@ -70,7 +70,7 @@ export class ServiceCompilerJob {
         const paramsSchema = this.getParamsSchema(module);
         const sym = this.symtable.get(`module:${route.moduleRef}`);
         this.code.line(`// ${route.method} ${route.path} - ${route.moduleRef}`);
-        // Match method
+        // Match methode
         const condition = route.method === '*' ? `true` : `$request.method === ${JSON.stringify(route.method)}`;
         this.code.block(`if (${condition}) {`, `}`, () => {
             // Match path
@@ -78,7 +78,12 @@ export class ServiceCompilerJob {
             this.code.block(`if (pathParams != null) {`, `}`, () => {
                 // Assemble the parameters
                 this.code.line(`let $p = ctx.convertType({
-                    $request, ...$variables, ...$state, ...$request.body, ...$request.query, ...pathParams
+                    $request,
+                    ...$variables,
+                    ...$state,
+                    ...$request.body,
+                    ...$request.query,
+                    ...pathParams,
                 }, ${JSON.stringify(paramsSchema)})`);
                 this.code.block(`try {`, `}`, () => {
                     // Invoke the module
