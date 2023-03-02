@@ -61,7 +61,7 @@ export class ServiceCompilerJob {
             for (const route of this.sortedRoutes) {
                 this.emitRoute(route);
             }
-            this.code.line(`return undefined;`);
+            this.code.line(`return processError({ status: 404, name: 'RouteNotFoundError', message: 'Route not found' })`);
         });
     }
 
