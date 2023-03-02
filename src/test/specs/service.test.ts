@@ -47,7 +47,11 @@ describe('Service Compiler', () => {
                 body: {},
             };
             const res = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, { $request });
+            assert.deepEqual(res, {
+                $request,
+                name: ['joe'],
+                foo: ['one', 'two'],
+            });
         });
 
         it('POST /echo', async () => {
@@ -68,7 +72,12 @@ describe('Service Compiler', () => {
                 },
             };
             const res = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, { $request });
+            assert.deepEqual(res, {
+                $request,
+                bar: [123, 345],
+                name: ['joe'],
+                foo: ['one', 'two'],
+            });
         });
 
         it('default 404', async () => {
@@ -130,6 +139,7 @@ describe('Service Compiler', () => {
                 $request,
                 authorized: true,
                 userId: 'joe',
+                '*': 'echo',
             });
         });
 
