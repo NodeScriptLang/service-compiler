@@ -2,9 +2,8 @@ import { CodeBuilder, SymTable } from '@nodescript/core/compiler';
 import { ModuleLoader } from '@nodescript/core/runtime';
 import { ModuleSpec, SchemaSpec } from '@nodescript/core/types';
 
-import { ServiceSpec } from '../index.js';
+import { ResponseSpecSchema, ServiceSpec } from '../index.js';
 import { RouteSpec } from '../schema/RouteSpec.js';
-import { processError } from '../util/compiler-functions.js';
 
 export class ServiceCompilerJob {
 
@@ -61,7 +60,7 @@ export class ServiceCompilerJob {
             for (const route of this.sortedRoutes) {
                 this.emitRoute(route);
             }
-            this.code.line(`return processError({ status: 404, name: 'RouteNotFoundError', message: 'Route not found' })`);
+            this.code.line(`return processError(ctx, { status: 404, name: 'RouteNotFoundError', message: 'Route not found' })`);
         });
     }
 
@@ -92,26 +91,86 @@ export class ServiceCompilerJob {
                         // If middleware returns an object, it could either be a response or state
                         this.code.block(`if ($r && typeof $r === 'object') {`, `}`, () => {
                             this.code.block(`if ($r.$response) {`, `}`, () => {
-                                this.code.line('return { $response: $r.$response };');
+                                this.code.line('return processResponse(ctx, $r);');
                             });
                             // Otherwise append it to $state to pass along
                             this.code.line(`Object.assign($state, $r)`);
                         });
                     } else {
                         // If it's an endpoint, just return the response
-                        this.code.line(`return $r`);
+                        this.code.line(`return processResponse(ctx, $r)`);
                     }
                 });
                 this.code.block(`catch (error) {`, `}`, () => {
                     // If the module throws, convert the error into response and return it.
-                    this.code.line(`return processError(error)`);
+                    this.code.line(`return processError(ctx, error)`);
                 });
             });
         });
     }
 
     private emitUtilities() {
-        this.code.line(processError.toString());
+        this.code.line(`
+        function processError(ctx, error) {
+            const $response = {
+                status: Number(error.status) || 500,
+                headers: {
+                    'content-type': ['application/json'],
+                },
+                body: {
+                    name: error.name,
+                    message: error.message,
+                },
+                attributes: {},
+            };
+            return { $response };
+        }
+        `);
+        this.code.line(`
+        function processResponse(ctx, value) {
+            // Empty body
+            if (value == null) {
+                return {
+                    $response: {
+                        status: 204,
+                        headers: {},
+                        body: '',
+                        attributes: {},
+                    }
+                };
+            }
+            // Explicit response
+            if (value && value.$response) {
+                return {
+                    $response: ctx.convertType(value.$response, ${JSON.stringify(ResponseSpecSchema.schema)}),
+                };
+            }
+            // String response
+            if (typeof value === 'string') {
+                return {
+                    $response: {
+                        status: 200,
+                        headers: {
+                            'content-type': ['text/plain'],
+                        },
+                        body: value,
+                        attributes: {},
+                    },
+                };
+            }
+            // Default JSON response
+            return {
+                $response: {
+                    status: 200,
+                    headers: {
+                        'content-type': ['application/json']
+                    },
+                    body: JSON.stringify(value),
+                    attributes: {},
+                }
+            };
+        }
+        `);
     }
 
     private getParamsSchema(module: ModuleSpec): SchemaSpec {

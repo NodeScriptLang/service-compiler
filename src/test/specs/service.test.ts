@@ -48,9 +48,18 @@ describe('Service Compiler', () => {
             };
             const res = await runtime.invokeService(service, $request);
             assert.deepEqual(res, {
-                $request,
-                name: ['joe'],
-                foo: ['one', 'two'],
+                $response: {
+                    status: 200,
+                    attributes: {},
+                    headers: {
+                        'content-type': ['application/json'],
+                    },
+                    body: JSON.stringify({
+                        $request,
+                        name: ['joe'],
+                        foo: ['one', 'two'],
+                    }),
+                }
             });
         });
 
@@ -73,10 +82,19 @@ describe('Service Compiler', () => {
             };
             const res = await runtime.invokeService(service, $request);
             assert.deepEqual(res, {
-                $request,
-                bar: [123, 345],
-                name: ['joe'],
-                foo: ['one', 'two'],
+                $response: {
+                    status: 200,
+                    attributes: {},
+                    headers: {
+                        'content-type': ['application/json'],
+                    },
+                    body: JSON.stringify({
+                        $request,
+                        foo: ['one', 'two'],
+                        bar: [123, 345],
+                        name: ['joe'],
+                    }),
+                }
             });
         });
 
@@ -96,6 +114,7 @@ describe('Service Compiler', () => {
                         'content-type': ['text/html'],
                     },
                     body: '<h1>Not found</h1>',
+                    attributes: {},
                 },
             });
         });
@@ -136,10 +155,19 @@ describe('Service Compiler', () => {
             };
             const res = await runtime.invokeService(service, $request);
             assert.deepEqual(res, {
-                $request,
-                authorized: true,
-                userId: 'joe',
-                '*': 'echo',
+                $response: {
+                    status: 200,
+                    headers: {
+                        'content-type': ['application/json'],
+                    },
+                    body: JSON.stringify({
+                        $request,
+                        authorized: true,
+                        userId: 'joe',
+                        '*': 'echo',
+                    }),
+                    attributes: {},
+                }
             });
         });
 
