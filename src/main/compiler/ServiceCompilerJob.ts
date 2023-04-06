@@ -11,19 +11,10 @@ export class ServiceCompilerJob {
     private code = new CodeBuilder();
     private symtable = new SymTable();
 
-    private sortedRoutes: RouteSpec[] = [];
-
     constructor(
         readonly loader: ModuleLoader,
         readonly serviceSpec: ServiceSpec,
-    ) {
-        this.sortedRoutes = this.serviceSpec.routes.slice().sort((a, b) => {
-            if (a.priority === b.priority) {
-                return a.path < b.path ? -1 : 1;
-            }
-            return a.priority > b.priority ? -1 : 1;
-        });
-    }
+    ) {}
 
     run() {
         if (this.done) {
@@ -40,7 +31,7 @@ export class ServiceCompilerJob {
     }
 
     private emitModuleImports() {
-        for (const route of this.sortedRoutes) {
+        for (const route of this.serviceSpec.routes) {
             const computeUrl = this.loader.resolveComputeUrl(route.moduleRef);
             const key = `module:${route.moduleRef}`;
             let sym = this.symtable.get(key, '');
@@ -57,7 +48,7 @@ export class ServiceCompilerJob {
             this.code.line(`const $request = params.$request`);
             this.code.line(`const $variables = params.$variables ?? Object.create(null)`);
             this.code.line(`const $state = params.$state ?? Object.create(null)`);
-            for (const route of this.sortedRoutes) {
+            for (const route of this.serviceSpec.routes) {
                 this.emitRoute(route);
             }
             this.code.line(`return processError(ctx, { status: 404, name: 'RouteNotFoundError', message: 'Route not found' })`);
