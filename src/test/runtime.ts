@@ -1,8 +1,9 @@
 import { FsModuleLoader } from '@nodescript/core/fs';
 import { GraphEvalContext } from '@nodescript/core/runtime';
+import { RequestSpec } from '@nodescript/core/schema';
 import { evalEsmModule } from '@nodescript/core/util';
 
-import { RequestSpec, ServiceCompiler, ServiceSpec } from '../main/index.js';
+import { ServiceCompiler, ServiceSpec } from '../main/index.js';
 
 /**
  * Test runtime utilities.
@@ -36,7 +37,7 @@ export class TestRuntime {
             $request,
             $variables,
         }, ctx);
-        return res;
+        return { res, ctx };
     }
 
 }

@@ -1,9 +1,55 @@
+import { RequestMethod, RequestSpec } from '@nodescript/core/schema';
 import assert from 'assert';
 
-import { RequestMethod, RequestSpec, RouteMethod, ServiceSpec } from '../../main/index.js';
+import { RouteMethod, ServiceSpec } from '../../main/index.js';
 import { runtime } from '../runtime.js';
 
 describe('Service Compiler', () => {
+
+    describe('single endpoint', () => {
+
+        it('works', async () => {
+            const $request: RequestSpec = {
+                method: RequestMethod.GET,
+                path: '/echo',
+                headers: {
+                    'accept': ['application/json'],
+                },
+                query: {
+                    name: ['joe'],
+                    foo: ['one', 'two'],
+                },
+                body: {},
+            };
+            const service: ServiceSpec = {
+                routes: [
+                    {
+                        method: RouteMethod.ANY,
+                        path: '/*',
+                        moduleRef: 'EchoRoute',
+                        middleware: [],
+                    }
+                ]
+            };
+            const { res } = await runtime.invokeService(service, $request);
+            assert.deepEqual(res, {
+                $response: {
+                    status: 200,
+                    attributes: {},
+                    headers: {
+                        'content-type': ['application/json'],
+                    },
+                    body: JSON.stringify({
+                        $request,
+                        name: ['joe'],
+                        foo: ['one', 'two'],
+                        '*': 'echo',
+                    }),
+                }
+            });
+        });
+
+    });
 
     describe('basic routing', () => {
 
@@ -12,20 +58,20 @@ describe('Service Compiler', () => {
                 {
                     method: RouteMethod.GET,
                     path: '/echo',
-                    middleware: false,
                     moduleRef: 'EchoRoute',
+                    middleware: [],
                 },
                 {
                     method: RouteMethod.POST,
                     path: '/echo',
-                    middleware: false,
                     moduleRef: 'EchoRoute',
+                    middleware: [],
                 },
                 {
                     method: RouteMethod.ANY,
                     path: '/*',
-                    middleware: false,
                     moduleRef: 'NotFoundRoute',
+                    middleware: [],
                 },
             ],
         };
@@ -43,7 +89,7 @@ describe('Service Compiler', () => {
                 },
                 body: {},
             };
-            const res = await runtime.invokeService(service, $request);
+            const { res } = await runtime.invokeService(service, $request);
             assert.deepEqual(res, {
                 $response: {
                     status: 200,
@@ -77,7 +123,7 @@ describe('Service Compiler', () => {
                     bar: [123, 345],
                 },
             };
-            const res = await runtime.invokeService(service, $request);
+            const { res } = await runtime.invokeService(service, $request);
             assert.deepEqual(res, {
                 $response: {
                     status: 200,
@@ -103,7 +149,7 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const res = await runtime.invokeService(service, $request);
+            const { res } = await runtime.invokeService(service, $request);
             assert.deepEqual(res, {
                 $response: {
                     status: 404,
@@ -125,19 +171,15 @@ describe('Service Compiler', () => {
                 {
                     method: RouteMethod.ANY,
                     path: '/*',
-                    middleware: true,
-                    moduleRef: 'AuthMiddleware',
-                },
-                {
-                    method: RouteMethod.ANY,
-                    path: '/*',
-                    middleware: false,
                     moduleRef: 'EchoRoute',
+                    middleware: [
+                        { moduleRef: 'AuthMiddleware' },
+                    ]
                 },
             ],
         };
 
-        it('pass data along', async () => {
+        it('pass data in locals', async () => {
             const $request: RequestSpec = {
                 method: RequestMethod.GET,
                 path: '/echo',
@@ -148,7 +190,9 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const res = await runtime.invokeService(service, $request);
+            const { res, ctx } = await runtime.invokeService(service, $request);
+            assert.strictEqual(ctx.getLocal('authorized'), true);
+            assert.strictEqual(ctx.getLocal('userId'), 'joe');
             assert.deepEqual(res, {
                 $response: {
                     status: 200,
@@ -157,12 +201,10 @@ describe('Service Compiler', () => {
                     },
                     body: JSON.stringify({
                         $request,
-                        authorized: true,
-                        userId: 'joe',
                         '*': 'echo',
                     }),
                     attributes: {},
-                }
+                },
             });
         });
 
@@ -176,7 +218,7 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const res = await runtime.invokeService(service, $request);
+            const { res } = await runtime.invokeService(service, $request);
             assert.deepEqual(res, {
                 $response: {
                     status: 403,

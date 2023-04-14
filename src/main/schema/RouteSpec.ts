@@ -5,8 +5,10 @@ import { RouteMethod, RouteMethodSchema } from './RouteMethod.js';
 export interface RouteSpec {
     method: RouteMethod;
     path: string;
-    middleware: boolean;
     moduleRef: string;
+    middleware: Array<{
+        moduleRef: string;
+    }>;
 }
 
 export const RouteSpecSchema = new Schema<RouteSpec>({
@@ -15,7 +17,15 @@ export const RouteSpecSchema = new Schema<RouteSpec>({
     properties: {
         method: RouteMethodSchema.schema,
         path: { type: 'string' },
-        middleware: { type: 'boolean' },
         moduleRef: { type: 'string' },
-    }
+        middleware: {
+            type: 'array',
+            items: {
+                type: 'object',
+                properties: {
+                    moduleRef: { type: 'string' },
+                }
+            },
+        },
+    },
 });

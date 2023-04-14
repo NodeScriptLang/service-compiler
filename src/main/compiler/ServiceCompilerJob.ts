@@ -1,9 +1,10 @@
 import { CodeBuilder, SymTable } from '@nodescript/core/compiler';
 import { ModuleLoader } from '@nodescript/core/runtime';
+import { ResponseSpecSchema } from '@nodescript/core/schema';
 import { ModuleSpec, SchemaSpec } from '@nodescript/core/types';
 
-import { ResponseSpecSchema, ServiceSpec } from '../index.js';
 import { RouteSpec } from '../schema/RouteSpec.js';
+import { ServiceSpec } from '../schema/ServiceSpec.js';
 
 export class ServiceCompilerJob {
 
@@ -32,14 +33,21 @@ export class ServiceCompilerJob {
 
     private emitModuleImports() {
         for (const route of this.serviceSpec.routes) {
-            const computeUrl = this.loader.resolveComputeUrl(route.moduleRef);
-            const key = `module:${route.moduleRef}`;
-            let sym = this.symtable.get(key, '');
-            if (!sym) {
-                sym = this.symtable.nextSym('m');
-                this.symtable.set(key, sym);
-                this.code.line(`import { compute as ${sym} } from '${computeUrl}';`);
+            this.emitModuleImport(route.moduleRef);
+            for (const mw of route.middleware) {
+                this.emitModuleImport(mw.moduleRef);
             }
+        }
+    }
+
+    private emitModuleImport(moduleRef: string) {
+        const computeUrl = this.loader.resolveComputeUrl(moduleRef);
+        const key = `module:${moduleRef}`;
+        let sym = this.symtable.get(key, '');
+        if (!sym) {
+            sym = this.symtable.nextSym('m');
+            this.symtable.set(key, sym);
+            this.code.line(`import { compute as ${sym} } from '${computeUrl}';`);
         }
     }
 
@@ -47,7 +55,7 @@ export class ServiceCompilerJob {
         this.code.block('export async function compute(params, ctx) {', '}', () => {
             this.code.line(`const $request = params.$request`);
             this.code.line(`const $variables = params.$variables ?? Object.create(null)`);
-            this.code.line(`const $state = params.$state ?? Object.create(null)`);
+            this.code.line(`ctx.setLocal('$responseHeaders', {});`);
             for (const route of this.serviceSpec.routes) {
                 this.emitRoute(route);
             }
@@ -56,48 +64,63 @@ export class ServiceCompilerJob {
     }
 
     private emitRoute(route: RouteSpec) {
-        const module = this.loader.resolveModule(route.moduleRef);
-        const paramsSchema = this.getParamsSchema(module);
-        const sym = this.symtable.get(`module:${route.moduleRef}`);
         this.code.line(`// ${route.method} ${route.path} - ${route.moduleRef}`);
-        // Match methode
+        // Match method
         const condition = route.method === '*' ? `true` : `$request.method === ${JSON.stringify(route.method)}`;
         this.code.block(`if (${condition}) {`, `}`, () => {
             // Match path
             this.code.line(`const pathParams = ctx.lib.matchPath(${JSON.stringify(route.path)}, $request.path);`);
             this.code.block(`if (pathParams != null) {`, `}`, () => {
-                // Assemble the parameters
-                this.code.line(`let $p = ctx.convertType({
-                    $request,
-                    ...$variables,
-                    ...$state,
-                    ...$request.body,
-                    ...$request.query,
-                    ...pathParams,
-                }, ${JSON.stringify(paramsSchema)})`);
-                this.code.block(`try {`, `}`, () => {
-                    // Invoke the module
-                    this.code.line(`const $r = await ${sym}($p, ctx.newScope());`);
-                    if (route.middleware) {
-                        // If middleware returns an object, it could either be a response or state
-                        this.code.block(`if ($r && typeof $r === 'object') {`, `}`, () => {
-                            this.code.block(`if ($r.$response) {`, `}`, () => {
-                                this.code.line('return processResponse(ctx, $r);');
-                            });
-                            // Otherwise append it to $state to pass along
-                            this.code.line(`Object.assign($state, $r)`);
-                        });
-                    } else {
-                        // If it's an endpoint, just return the response
-                        this.code.line(`return processResponse(ctx, $r)`);
-                    }
-                });
-                this.code.block(`catch (error) {`, `}`, () => {
-                    // If the module throws, convert the error into response and return it.
-                    this.code.line(`return processError(ctx, error)`);
+                for (const mw of route.middleware) {
+                    this.emitMiddlewareHandler(mw.moduleRef);
+                }
+                this.emitRouteHandler(route);
+            });
+        });
+    }
+
+    private emitMiddlewareHandler(moduleRef: string) {
+        this.code.line(`// Middleware ${moduleRef}`);
+        this.code.block(`try {`, `}`, () => {
+            this.emitHandlerCompute(moduleRef);
+            // If middleware returns an object with $response, stop processing and return it
+            this.code.block(`if ($r && typeof $r === 'object') {`, `}`, () => {
+                this.code.block(`if ($r.$response) {`, `}`, () => {
+                    this.code.line('return processResponse(ctx, $r);');
                 });
             });
         });
+        this.code.block(`catch (error) {`, `}`, () => {
+            // If the middleware throws, convert the error into response and return it
+            this.code.line(`return processError(ctx, error)`);
+        });
+    }
+
+    private emitRouteHandler(route: RouteSpec) {
+        this.code.line(`// Route handler`);
+        this.code.block(`try {`, `}`, () => {
+            this.emitHandlerCompute(route.moduleRef);
+            this.code.line(`return processResponse(ctx, $r)`);
+        });
+        this.code.block(`catch (error) {`, `}`, () => {
+            // If the route throws, convert the error into response and return it
+            this.code.line(`return processError(ctx, error)`);
+        });
+    }
+
+    private emitHandlerCompute(moduleRef: string) {
+        const module = this.loader.resolveModule(moduleRef);
+        const paramsSchema = this.getParamsSchema(module);
+        const sym = this.symtable.get(`module:${moduleRef}`);
+        // TODO properly inject variables based on param.attributes.variableKey
+        this.code.line(`let $p = ctx.convertType({
+                $request,
+                ...$variables,
+                ...$request.body,
+                ...$request.query,
+                ...pathParams,
+            }, ${JSON.stringify(paramsSchema)})`);
+        this.code.line(`const $r = await ${sym}($p, ctx);`);
     }
 
     private emitUtilities() {
@@ -124,16 +147,23 @@ export class ServiceCompilerJob {
                 return {
                     $response: {
                         status: 204,
-                        headers: {},
+                        headers: ctx.getLocal('$responseHeaders') ?? {},
                         body: '',
                         attributes: {},
-                    }
+                    },
                 };
             }
             // Explicit response
             if (value && value.$response) {
+                const $response = ctx.convertType({
+                    ...value.$response,
+                    headers: {
+                        ...ctx.getLocal('$responseHeaders'),
+                        ...value.$response.headers,
+                    },
+                }, ${JSON.stringify(ResponseSpecSchema.schema)});
                 return {
-                    $response: ctx.convertType(value.$response, ${JSON.stringify(ResponseSpecSchema.schema)}),
+                    $response,
                 };
             }
             // String response
@@ -143,6 +173,7 @@ export class ServiceCompilerJob {
                         status: 200,
                         headers: {
                             'content-type': ['text/plain'],
+                            ...ctx.getLocal('$responseHeaders'),
                         },
                         body: value,
                         attributes: {},
@@ -154,11 +185,12 @@ export class ServiceCompilerJob {
                 $response: {
                     status: 200,
                     headers: {
-                        'content-type': ['application/json']
+                        'content-type': ['application/json'],
+                        ...ctx.getLocal('$responseHeaders'),
                     },
                     body: JSON.stringify(value),
                     attributes: {},
-                }
+                },
             };
         }
         `);
