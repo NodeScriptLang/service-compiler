@@ -3,6 +3,7 @@ import { Schema } from 'airtight';
 import { RouteMethod, RouteMethodSchema } from './RouteMethod.js';
 
 export interface RouteSpec {
+    routeId?: string;
     method: RouteMethod;
     path: string;
     moduleRef: string;
@@ -15,6 +16,7 @@ export const RouteSpecSchema = new Schema<RouteSpec>({
     id: 'RouteSpec',
     type: 'object',
     properties: {
+        routeId: { type: 'string', optional: true },
         method: RouteMethodSchema.schema,
         path: { type: 'string' },
         moduleRef: { type: 'string' },

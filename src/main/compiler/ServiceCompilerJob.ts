@@ -71,6 +71,9 @@ export class ServiceCompilerJob {
             // Match path
             this.code.line(`const pathParams = ctx.lib.matchPath(${JSON.stringify(route.path)}, $request.path);`);
             this.code.block(`if (pathParams != null) {`, `}`, () => {
+                if (route.routeId) {
+                    this.code.line(`ctx.setLocal('$routeId', ${JSON.stringify(route.routeId)})`);
+                }
                 for (const mw of route.middleware) {
                     this.emitMiddlewareHandler(mw.moduleRef);
                 }
