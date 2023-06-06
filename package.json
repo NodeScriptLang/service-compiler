@@ -1,6 +1,6 @@
 {
     "name": "@nodescript/service-compiler",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "NodeScript Service Compiler",
     "type": "module",
     "sideEffects": false,
