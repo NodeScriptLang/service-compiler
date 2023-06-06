@@ -1,6 +1,6 @@
 import { GraphEvalContext, ModuleDefinition } from '@nodescript/core/types';
 
-export const module: ModuleDefinition = {
+export const module: ModuleDefinition<any, any> = {
     moduleName: 'AuthMidleware',
     version: '1.0.0',
     params: {
