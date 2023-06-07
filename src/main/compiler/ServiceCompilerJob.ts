@@ -115,15 +115,27 @@ export class ServiceCompilerJob {
         const module = this.loader.resolveModule(moduleRef);
         const paramsSchema = this.getParamsSchema(module);
         const sym = this.symtable.get(`module:${moduleRef}`);
-        // TODO properly inject variables based on param.attributes.variableKey
+        const variableEntries = this.getVariableEntries(module);
         this.code.line(`let $p = ctx.convertType({
                 $request,
-                ...$variables,
                 ...$request.body,
                 ...$request.query,
                 ...pathParams,
+                ${variableEntries.join(',')}
             }, ${JSON.stringify(paramsSchema)})`);
         this.code.line(`const $r = await ${sym}($p, ctx);`);
+    }
+
+    private getVariableEntries(module: ModuleSpec) {
+        const entries: string[] = [];
+        for (const [paramKey, paramSpec] of Object.entries(module.params)) {
+            const variableKey = paramSpec.attributes.variableKey;
+            if (!variableKey) {
+                continue;
+            }
+            entries.push(`${JSON.stringify(paramKey)}: $variables[${JSON.stringify(variableKey)}]`);
+        }
+        return entries;
     }
 
     private emitUtilities() {

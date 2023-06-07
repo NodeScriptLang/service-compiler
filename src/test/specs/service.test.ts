@@ -49,6 +49,32 @@ describe('Service Compiler', () => {
             });
         });
 
+        it('supports variables', async () => {
+            const $request: RequestSpec = {
+                method: RequestMethod.GET,
+                path: '/variable',
+                headers: {
+                    'accept': ['application/json'],
+                },
+                query: {},
+                body: {},
+            };
+            const service: ServiceSpec = {
+                routes: [
+                    {
+                        method: RouteMethod.ANY,
+                        path: '/variable',
+                        moduleRef: 'VariableEcho',
+                        middleware: [],
+                    }
+                ]
+            };
+            const { res } = await runtime.invokeService(service, $request, {
+                MY_VAR: '$uper$ecret',
+            });
+            assert.deepEqual(res.$response.body, '$uper$ecret');
+        });
+
     });
 
     describe('basic routing', () => {
