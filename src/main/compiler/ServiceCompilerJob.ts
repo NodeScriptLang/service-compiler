@@ -87,10 +87,8 @@ export class ServiceCompilerJob {
         this.code.block(`try {`, `}`, () => {
             this.emitHandlerCompute(moduleRef);
             // If middleware returns an object with $response, stop processing and return it
-            this.code.block(`if ($r && typeof $r === 'object') {`, `}`, () => {
-                this.code.block(`if ($r.$response) {`, `}`, () => {
-                    this.code.line('return processResponse(ctx, $r);');
-                });
+            this.code.block(`if (typeof $r?.response === 'object') {`, `}`, () => {
+                this.code.line('return processResponse(ctx, $r);');
             });
         });
         this.code.block(`catch (error) {`, `}`, () => {
