@@ -216,9 +216,7 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const { res, ctx } = await runtime.invokeService(service, $request);
-            assert.strictEqual(ctx.getLocal('authorized'), true);
-            assert.strictEqual(ctx.getLocal('userId'), 'joe');
+            const { res } = await runtime.invokeService(service, $request);
             assert.deepEqual(res, {
                 $response: {
                     status: 200,
@@ -228,13 +226,36 @@ describe('Service Compiler', () => {
                     body: JSON.stringify({
                         $request,
                         '*': 'echo',
+                        'authorized': true,
+                        'userId': 'joe',
                     }),
                     attributes: {},
                 },
             });
         });
 
-        it('throw the error', async () => {
+        it('returns a custom response', async () => {
+            const $request: RequestSpec = {
+                method: RequestMethod.GET,
+                path: '/echo',
+                headers: {
+                    'x-teapot': ['1'],
+                },
+                query: {},
+                body: {},
+            };
+            const { res } = await runtime.invokeService(service, $request);
+            assert.deepEqual(res, {
+                $response: {
+                    status: 418,
+                    headers: {},
+                    body: 'I am a teapot, baby!',
+                    attributes: {},
+                }
+            });
+        });
+
+        it('throws the error', async () => {
             const $request: RequestSpec = {
                 method: RequestMethod.GET,
                 path: '/echo',

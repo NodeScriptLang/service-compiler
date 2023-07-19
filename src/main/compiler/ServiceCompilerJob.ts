@@ -64,48 +64,50 @@ export class ServiceCompilerJob {
     }
 
     private emitRoute(route: RouteSpec) {
-        this.code.line(`// ${route.method} ${route.path} - ${route.moduleRef}`);
+        this.code.line(`// ${route.method} ${route.path}`);
         // Match method
         const condition = route.method === '*' ? `true` : `$request.method === ${JSON.stringify(route.method)}`;
         this.code.block(`if (${condition}) {`, `}`, () => {
             // Match path
             this.code.line(`const pathParams = ctx.lib.matchPath(${JSON.stringify(route.path)}, $request.path);`);
             this.code.block(`if (pathParams != null) {`, `}`, () => {
-                if (route.routeId) {
-                    this.code.line(`ctx.setLocal('$routeId', ${JSON.stringify(route.routeId)})`);
-                }
-                for (const mw of route.middleware) {
-                    this.emitMiddlewareHandler(mw.moduleRef);
-                }
-                this.emitRouteHandler(route);
+                this.code.block(`try {`, `}`, () => {
+                    this.code.line(`const localParams = {};`);
+                    if (route.routeId) {
+                        this.code.line(`ctx.setLocal('$routeId', ${JSON.stringify(route.routeId)})`);
+                    }
+                    for (const mw of route.middleware) {
+                        this.emitMiddlewareHandler(mw.moduleRef);
+                    }
+                    this.emitRouteHandler(route);
+                });
+                this.code.block(` catch (error) {`, `}`, () => {
+                    this.code.line(`return processError(ctx, error)`);
+                });
             });
         });
     }
 
     private emitMiddlewareHandler(moduleRef: string) {
-        this.code.line(`// Middleware ${moduleRef}`);
-        this.code.block(`try {`, `}`, () => {
+        this.code.block(`{`, `}`, () => {
+            this.code.line(`// Middleware ${moduleRef}`);
             this.emitHandlerCompute(moduleRef);
             // If middleware returns an object with $response, stop processing and return it
             this.code.block(`if (typeof $r?.response === 'object') {`, `}`, () => {
                 this.code.line('return processResponse(ctx, $r);');
             });
-        });
-        this.code.block(`catch (error) {`, `}`, () => {
-            // If the middleware throws, convert the error into response and return it
-            this.code.line(`return processError(ctx, error)`);
+            // If middlware returns an object, pass it onwards via local params
+            this.code.block(`if ($r && typeof $r === 'object') {`, `}`, () => {
+                this.code.line(`Object.assign(localParams, $r)`);
+            });
         });
     }
 
     private emitRouteHandler(route: RouteSpec) {
-        this.code.line(`// Route handler`);
-        this.code.block(`try {`, `}`, () => {
+        this.code.block(`{`, `}`, () => {
+            this.code.line(`// Route handler ${route.moduleRef}`);
             this.emitHandlerCompute(route.moduleRef);
             this.code.line(`return processResponse(ctx, $r)`);
-        });
-        this.code.block(`catch (error) {`, `}`, () => {
-            // If the route throws, convert the error into response and return it
-            this.code.line(`return processError(ctx, error)`);
         });
     }
 
@@ -119,6 +121,7 @@ export class ServiceCompilerJob {
                 ...$request.body,
                 ...$request.query,
                 ...pathParams,
+                ...localParams,
                 ${variableEntries.join(',')}
             }, ${JSON.stringify(paramsSchema)})`);
         this.code.line(`const $r = await ${sym}($p, ctx);`);
@@ -160,7 +163,9 @@ export class ServiceCompilerJob {
                 return {
                     $response: {
                         status: 204,
-                        headers: ctx.getLocal('$responseHeaders') ?? {},
+                        headers: {
+                            ...ctx.getLocal('$responseHeaders'),
+                        },
                         body: '',
                         attributes: {},
                     },
