@@ -143,13 +143,13 @@ export class ServiceCompilerJob {
         this.code.line(`
         function processError(ctx, error) {
             const $response = {
-                status: Number(error.status) || 500,
+                status: Number(error?.status) || 500,
                 headers: {
                     'content-type': ['application/json'],
                 },
                 body: {
-                    name: error.name,
-                    message: error.message,
+                    name: error?.name ?? 'Error',
+                    message: error?.message ?? 'Unknown error',
                 },
                 attributes: {},
             };
