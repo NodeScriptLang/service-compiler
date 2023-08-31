@@ -1,7 +1,7 @@
 import { FsModuleLoader } from '@nodescript/core/fs';
 import { GraphEvalContext } from '@nodescript/core/runtime';
 import { RequestSpec } from '@nodescript/core/schema';
-import { evalEsmModule } from '@nodescript/core/util';
+import { errorToResponse, evalEsmModule, resultToResponse } from '@nodescript/core/util';
 
 import { ServiceCompiler, ServiceSpec } from '../main/index.js';
 
@@ -33,11 +33,15 @@ export class TestRuntime {
         const { code } = await compiler.compile(serviceSpec);
         const { compute } = await evalEsmModule(code);
         const ctx = new GraphEvalContext();
-        const res = await compute({
-            $request,
-            $variables,
-        }, ctx);
-        return { res, ctx };
+        try {
+            const res = await compute({
+                $request,
+                $variables,
+            }, ctx);
+            return resultToResponse(res);
+        } catch (error) {
+            return errorToResponse(error);
+        }
     }
 
 }

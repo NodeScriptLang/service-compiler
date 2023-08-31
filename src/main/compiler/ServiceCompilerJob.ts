@@ -1,6 +1,5 @@
 import { CodeBuilder, SymTable } from '@nodescript/core/compiler';
 import { ModuleLoader } from '@nodescript/core/runtime';
-import { ResponseSpecSchema } from '@nodescript/core/schema';
 import { ModuleSpec, SchemaSpec } from '@nodescript/core/types';
 
 import { RouteSpec } from '../schema/RouteSpec.js';
@@ -22,7 +21,6 @@ export class ServiceCompilerJob {
             return;
         }
         this.emitModuleImports();
-        this.emitUtilities();
         this.emitCompute();
         this.done = true;
     }
@@ -55,11 +53,19 @@ export class ServiceCompilerJob {
         this.code.block('export async function compute(params, ctx) {', '}', () => {
             this.code.line(`const $request = params.$request`);
             this.code.line(`const $variables = params.$variables ?? Object.create(null)`);
-            this.code.line(`ctx.setLocal('$responseHeaders', {});`);
             for (const route of this.serviceSpec.routes) {
                 this.emitRoute(route);
             }
-            this.code.line(`return processError(ctx, { status: 404, name: 'RouteNotFoundError', message: 'Route not found' })`);
+            this.emitThrow('RouteNotFoundError', 404, 'Route not found');
+        });
+    }
+
+    private emitThrow(name: string, status: number, message: string) {
+        this.code.block('{', '}', () => {
+            this.code.line(`const error = new Error(${JSON.stringify(message)});`);
+            this.code.line(`error.name = ${JSON.stringify(name)}`);
+            this.code.line(`error.status = ${JSON.stringify(status)}`);
+            this.code.line('throw error;');
         });
     }
 
@@ -71,19 +77,14 @@ export class ServiceCompilerJob {
             // Match path
             this.code.line(`const pathParams = ctx.lib.matchPath(${JSON.stringify(route.path)}, $request.path);`);
             this.code.block(`if (pathParams != null) {`, `}`, () => {
-                this.code.block(`try {`, `}`, () => {
-                    this.code.line(`const localParams = {};`);
-                    if (route.routeId) {
-                        this.code.line(`ctx.setLocal('$routeId', ${JSON.stringify(route.routeId)})`);
-                    }
-                    for (const mw of route.middleware) {
-                        this.emitMiddlewareHandler(mw.moduleRef);
-                    }
-                    this.emitRouteHandler(route);
-                });
-                this.code.block(` catch (error) {`, `}`, () => {
-                    this.code.line(`return processError(ctx, error)`);
-                });
+                this.code.line(`const localParams = {};`);
+                if (route.routeId) {
+                    this.code.line(`ctx.setLocal('$routeId', ${JSON.stringify(route.routeId)})`);
+                }
+                for (const mw of route.middleware) {
+                    this.emitMiddlewareHandler(mw.moduleRef);
+                }
+                this.emitRouteHandler(route);
             });
         });
     }
@@ -94,11 +95,11 @@ export class ServiceCompilerJob {
             this.emitHandlerCompute(moduleRef);
             // If middleware returns an object with $response, stop processing and return it
             this.code.block(`if (typeof $r?.response === 'object') {`, `}`, () => {
-                this.code.line('return processResponse(ctx, $r);');
+                this.code.line('return $r;');
             });
             // If middlware returns an object, pass it onwards via local params
             this.code.block(`if ($r && typeof $r === 'object') {`, `}`, () => {
-                this.code.line(`Object.assign(localParams, $r)`);
+                this.code.line(`Object.assign(localParams, $r);`);
             });
         });
     }
@@ -107,7 +108,7 @@ export class ServiceCompilerJob {
         this.code.block(`{`, `}`, () => {
             this.code.line(`// Route handler ${route.moduleRef}`);
             this.emitHandlerCompute(route.moduleRef);
-            this.code.line(`return processResponse(ctx, $r)`);
+            this.code.line(`return $r;`);
         });
     }
 
@@ -137,81 +138,6 @@ export class ServiceCompilerJob {
             entries.push(`${JSON.stringify(paramKey)}: $variables[${JSON.stringify(variableKey)}]`);
         }
         return entries;
-    }
-
-    private emitUtilities() {
-        this.code.line(`
-        function processError(ctx, error) {
-            const $response = {
-                status: Number(error?.status) || 500,
-                headers: {
-                    'content-type': ['application/json'],
-                },
-                body: {
-                    name: error?.name ?? 'Error',
-                    message: error?.message ?? 'Unknown error',
-                },
-                attributes: {},
-            };
-            return { $response };
-        }
-        `);
-        this.code.line(`
-        function processResponse(ctx, value) {
-            // Empty body
-            if (value == null) {
-                return {
-                    $response: {
-                        status: 204,
-                        headers: {
-                            ...ctx.getLocal('$responseHeaders'),
-                        },
-                        body: '',
-                        attributes: {},
-                    },
-                };
-            }
-            // Explicit response
-            if (value && value.$response) {
-                const $response = ctx.convertType({
-                    ...value.$response,
-                    headers: {
-                        ...ctx.getLocal('$responseHeaders'),
-                        ...value.$response.headers,
-                    },
-                }, ${JSON.stringify(ResponseSpecSchema.schema)});
-                return {
-                    $response,
-                };
-            }
-            // String response
-            if (typeof value === 'string') {
-                return {
-                    $response: {
-                        status: 200,
-                        headers: {
-                            'content-type': ['text/plain'],
-                            ...ctx.getLocal('$responseHeaders'),
-                        },
-                        body: value,
-                        attributes: {},
-                    },
-                };
-            }
-            // Default JSON response
-            return {
-                $response: {
-                    status: 200,
-                    headers: {
-                        'content-type': ['application/json'],
-                        ...ctx.getLocal('$responseHeaders'),
-                    },
-                    body: JSON.stringify(value),
-                    attributes: {},
-                },
-            };
-        }
-        `);
     }
 
     private getParamsSchema(module: ModuleSpec): SchemaSpec {

@@ -31,21 +31,19 @@ describe('Service Compiler', () => {
                     }
                 ]
             };
-            const { res } = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, {
-                $response: {
-                    status: 200,
-                    attributes: {},
-                    headers: {
-                        'content-type': ['application/json'],
-                    },
-                    body: JSON.stringify({
-                        $request,
-                        name: ['joe'],
-                        foo: ['one', 'two'],
-                        '*': 'echo',
-                    }),
-                }
+            const response = await runtime.invokeService(service, $request);
+            assert.deepEqual(response, {
+                status: 200,
+                attributes: {},
+                headers: {
+                    'content-type': ['application/json'],
+                },
+                body: JSON.stringify({
+                    $request,
+                    name: ['joe'],
+                    foo: ['one', 'two'],
+                    '*': 'echo',
+                }),
             });
         });
 
@@ -69,10 +67,10 @@ describe('Service Compiler', () => {
                     }
                 ]
             };
-            const { res } = await runtime.invokeService(service, $request, {
+            const response = await runtime.invokeService(service, $request, {
                 MY_VAR: '$uper$ecret',
             });
-            assert.deepEqual(res.$response.body, '$uper$ecret');
+            assert.deepEqual(response.body, '$uper$ecret');
         });
 
     });
@@ -115,20 +113,18 @@ describe('Service Compiler', () => {
                 },
                 body: {},
             };
-            const { res } = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, {
-                $response: {
-                    status: 200,
-                    attributes: {},
-                    headers: {
-                        'content-type': ['application/json'],
-                    },
-                    body: JSON.stringify({
-                        $request,
-                        name: ['joe'],
-                        foo: ['one', 'two'],
-                    }),
-                }
+            const response = await runtime.invokeService(service, $request);
+            assert.deepEqual(response, {
+                status: 200,
+                attributes: {},
+                headers: {
+                    'content-type': ['application/json'],
+                },
+                body: JSON.stringify({
+                    $request,
+                    name: ['joe'],
+                    foo: ['one', 'two'],
+                }),
             });
         });
 
@@ -149,21 +145,19 @@ describe('Service Compiler', () => {
                     bar: [123, 345],
                 },
             };
-            const { res } = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, {
-                $response: {
-                    status: 200,
-                    attributes: {},
-                    headers: {
-                        'content-type': ['application/json'],
-                    },
-                    body: JSON.stringify({
-                        $request,
-                        foo: ['one', 'two'],
-                        bar: [123, 345],
-                        name: ['joe'],
-                    }),
-                }
+            const response = await runtime.invokeService(service, $request);
+            assert.deepEqual(response, {
+                status: 200,
+                attributes: {},
+                headers: {
+                    'content-type': ['application/json'],
+                },
+                body: JSON.stringify({
+                    $request,
+                    foo: ['one', 'two'],
+                    bar: [123, 345],
+                    name: ['joe'],
+                }),
             });
         });
 
@@ -175,16 +169,14 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const { res } = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, {
-                $response: {
-                    status: 404,
-                    headers: {
-                        'content-type': ['text/html'],
-                    },
-                    body: '<h1>Not found</h1>',
-                    attributes: {},
+            const response = await runtime.invokeService(service, $request);
+            assert.deepEqual(response, {
+                status: 404,
+                headers: {
+                    'content-type': ['text/html'],
                 },
+                body: '<h1>Not found</h1>',
+                attributes: {},
             });
         });
 
@@ -216,21 +208,19 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const { res } = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, {
-                $response: {
-                    status: 200,
-                    headers: {
-                        'content-type': ['application/json'],
-                    },
-                    body: JSON.stringify({
-                        $request,
-                        '*': 'echo',
-                        'authorized': true,
-                        'userId': 'joe',
-                    }),
-                    attributes: {},
+            const response = await runtime.invokeService(service, $request);
+            assert.deepEqual(response, {
+                status: 200,
+                headers: {
+                    'content-type': ['application/json'],
                 },
+                body: JSON.stringify({
+                    $request,
+                    '*': 'echo',
+                    'authorized': true,
+                    'userId': 'joe',
+                }),
+                attributes: {},
             });
         });
 
@@ -244,14 +234,12 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const { res } = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, {
-                $response: {
-                    status: 418,
-                    headers: {},
-                    body: 'I am a teapot, baby!',
-                    attributes: {},
-                }
+            const response = await runtime.invokeService(service, $request);
+            assert.deepEqual(response, {
+                status: 418,
+                headers: {},
+                body: 'I am a teapot, baby!',
+                attributes: {},
             });
         });
 
@@ -265,19 +253,17 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const { res } = await runtime.invokeService(service, $request);
-            assert.deepEqual(res, {
-                $response: {
-                    status: 403,
-                    headers: {
-                        'content-type': ['application/json'],
-                    },
-                    body: {
-                        name: 'Error',
-                        message: 'Access Denied',
-                    },
-                    attributes: {},
-                }
+            const response = await runtime.invokeService(service, $request);
+            assert.deepEqual(response, {
+                status: 403,
+                headers: {
+                    'content-type': ['application/json'],
+                },
+                body: {
+                    name: 'Error',
+                    message: 'Access Denied',
+                },
+                attributes: {},
             });
         });
 
