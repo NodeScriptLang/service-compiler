@@ -78,9 +78,13 @@ export class ServiceCompilerJob {
             this.code.line(`const pathParams = ctx.lib.matchPath(${JSON.stringify(route.path)}, $request.path);`);
             this.code.block(`if (pathParams != null) {`, `}`, () => {
                 this.code.line(`const localParams = {};`);
-                if (route.routeId) {
-                    this.code.line(`ctx.setLocal('$routeId', ${JSON.stringify(route.routeId)})`);
-                }
+                this.code.line(`ctx.setLocal('$route', ${JSON.stringify({
+                    routeId: route.routeId,
+                    method: route.method,
+                    path: route.path,
+                    moduleRef: route.moduleRef,
+                    ...route.metadata,
+                })})`);
                 for (const mw of route.middleware) {
                     this.emitMiddlewareHandler(mw.moduleRef);
                 }

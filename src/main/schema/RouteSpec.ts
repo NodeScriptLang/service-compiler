@@ -10,6 +10,7 @@ export interface RouteSpec {
     middleware: Array<{
         moduleRef: string;
     }>;
+    metadata?: Record<string, string>;
 }
 
 export const RouteSpecSchema = new Schema<RouteSpec>({
@@ -28,6 +29,12 @@ export const RouteSpecSchema = new Schema<RouteSpec>({
                     moduleRef: { type: 'string' },
                 }
             },
+        },
+        metadata: {
+            type: 'object',
+            properties: {},
+            additionalProperties: { type: 'string' },
+            optional: true,
         },
     },
 });
