@@ -79,7 +79,6 @@ export class ServiceCompilerJob {
             this.code.block(`if (pathParams != null) {`, `}`, () => {
                 this.code.line(`const localParams = {};`);
                 this.code.line(`ctx.setLocal('$route', ${JSON.stringify({
-                    routeId: route.routeId,
                     method: route.method,
                     path: route.path,
                     moduleRef: route.moduleRef,
