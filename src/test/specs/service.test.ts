@@ -34,16 +34,13 @@ describe('Service Compiler', () => {
             const response = await runtime.invokeService(service, $request);
             assert.deepEqual(response, {
                 status: 200,
-                attributes: {},
-                headers: {
-                    'content-type': ['application/json'],
-                },
-                body: JSON.stringify({
+                headers: {},
+                body: {
                     $request,
                     name: ['joe'],
                     foo: ['one', 'two'],
                     '*': 'echo',
-                }),
+                },
             });
         });
 
@@ -116,15 +113,12 @@ describe('Service Compiler', () => {
             const response = await runtime.invokeService(service, $request);
             assert.deepEqual(response, {
                 status: 200,
-                attributes: {},
-                headers: {
-                    'content-type': ['application/json'],
-                },
-                body: JSON.stringify({
+                headers: {},
+                body: {
                     $request,
                     name: ['joe'],
                     foo: ['one', 'two'],
-                }),
+                },
             });
         });
 
@@ -148,16 +142,13 @@ describe('Service Compiler', () => {
             const response = await runtime.invokeService(service, $request);
             assert.deepEqual(response, {
                 status: 200,
-                attributes: {},
-                headers: {
-                    'content-type': ['application/json'],
-                },
-                body: JSON.stringify({
+                headers: {},
+                body: {
                     $request,
                     foo: ['one', 'two'],
                     bar: [123, 345],
                     name: ['joe'],
-                }),
+                },
             });
         });
 
@@ -176,7 +167,6 @@ describe('Service Compiler', () => {
                     'content-type': ['text/html'],
                 },
                 body: '<h1>Not found</h1>',
-                attributes: {},
             });
         });
 
@@ -211,16 +201,13 @@ describe('Service Compiler', () => {
             const response = await runtime.invokeService(service, $request);
             assert.deepEqual(response, {
                 status: 200,
-                headers: {
-                    'content-type': ['application/json'],
-                },
-                body: JSON.stringify({
+                headers: {},
+                body: {
                     $request,
                     '*': 'echo',
                     'authorized': true,
                     'userId': 'joe',
-                }),
-                attributes: {},
+                },
             });
         });
 
@@ -239,7 +226,6 @@ describe('Service Compiler', () => {
                 status: 418,
                 headers: {},
                 body: 'I am a teapot, baby!',
-                attributes: {},
             });
         });
 
@@ -263,7 +249,6 @@ describe('Service Compiler', () => {
                     name: 'Error',
                     message: 'Access Denied',
                 },
-                attributes: {},
             });
         });
 
