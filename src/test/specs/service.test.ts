@@ -198,7 +198,9 @@ describe('Service Compiler', () => {
                 query: {},
                 body: {},
             };
-            const response = await runtime.invokeService(service, $request);
+            const response = await runtime.invokeService(service, $request, {
+                AUTH_TOKEN: 'secret'
+            });
             assert.deepEqual(response, {
                 status: 200,
                 headers: {},

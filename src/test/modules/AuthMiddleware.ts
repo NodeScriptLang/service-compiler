@@ -6,7 +6,13 @@ export const module: ModuleDefinition<any, any> = {
     params: {
         $request: {
             schema: { type: 'any' },
-        }
+        },
+        AUTH_TOKEN: {
+            schema: { type: 'string' },
+            attributes: {
+                variableKey: 'AUTH_TOKEN',
+            },
+        },
     },
     result: {
         schema: { type: 'any' },
@@ -23,8 +29,8 @@ export const compute = (params: any) => {
             },
         };
     }
-    const auth = $request.headers['authorization'];
-    if (!auth) {
+    const auth = $request.headers['authorization']?.[0];
+    if (auth !== params.AUTH_TOKEN) {
         const err = new Error('Access Denied') as any;
         err.status = 403;
         throw err;

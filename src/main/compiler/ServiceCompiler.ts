@@ -16,8 +16,11 @@ export class ServiceCompiler {
     async compile(
         serviceSpec: ServiceSpec,
     ) {
-        for (const { moduleRef } of serviceSpec.routes) {
-            await this.loader.loadModule(moduleRef);
+        for (const route of serviceSpec.routes) {
+            await this.loader.loadModule(route.moduleRef);
+            for (const mw of route.middleware) {
+                await this.loader.loadModule(mw.moduleRef);
+            }
         }
         const job = new ServiceCompilerJob(this.loader, serviceSpec);
         job.run();
