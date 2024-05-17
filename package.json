@@ -41,8 +41,8 @@
         "typescript": "^4.3.5"
     },
     "dependencies": {
-        "@nodescript/core": "^7.15.3",
+        "@nodescript/core": "^7.15.4",
         "@nodescript/pathmatcher": "^1.2.0",
-        "airtight": "^5.7.1"
+        "airtight": "^5.7.2"
     }
 }
