@@ -250,6 +250,7 @@ describe('Service Compiler', () => {
                 body: {
                     name: 'Error',
                     message: 'Access Denied',
+                    details: undefined,
                 },
             });
         });
