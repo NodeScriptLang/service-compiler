@@ -38,11 +38,11 @@
         "eslint": "^8.24.0",
         "mocha": "^9.0.2",
         "pre-commit": "^1.2.2",
-        "typescript": "^4.3.5"
+        "typescript": "^5.5.3"
     },
     "dependencies": {
-        "@nodescript/core": "^7.16.2",
-        "@nodescript/pathmatcher": "^1.2.0",
+        "@nodescript/core": "^7.17.0",
+        "@nodescript/pathmatcher": "^1.3.0",
         "airtight": "^5.7.2"
     }
 }

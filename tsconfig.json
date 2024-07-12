@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
-        "target": "ES2020",
-        "module": "ESNext",
+        "target": "ES2022",
+        "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "strict": true,
         "skipLibCheck": true,
@@ -13,6 +13,7 @@
         "lib": ["ES2015"],
         "rootDir": "src",
         "outDir": "out",
+        "useDefineForClassFields": false,
     },
     "include": [
         "src"
