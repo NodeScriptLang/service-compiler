@@ -78,6 +78,12 @@ export class ServiceCompilerJob {
             this.code.line(`const pathParams = ctx.lib.matchPath(${JSON.stringify(route.path)}, $request.path);`);
             this.code.block(`if (pathParams != null) {`, `}`, () => {
                 this.code.line(`const localParams = {};`);
+                this.code.line(`const requestParams = {
+                    $request,
+                    ...(typeof $request.body === 'object' ? $request.body : {}),
+                    ...$request.query,
+                    ...pathParams,
+                };`);
                 this.code.line(`ctx.setLocal('$route', ${JSON.stringify({
                     method: route.method,
                     path: route.path,
@@ -100,7 +106,7 @@ export class ServiceCompilerJob {
             this.code.block(`if (typeof $r?.response === 'object') {`, `}`, () => {
                 this.code.line('return $r;');
             });
-            // If middlware returns an object, pass it onwards via local params
+            // If middleware returns an object, pass it onwards via local params
             this.code.block(`if ($r && typeof $r === 'object') {`, `}`, () => {
                 this.code.line(`Object.assign(localParams, $r);`);
             });
@@ -120,10 +126,8 @@ export class ServiceCompilerJob {
         const paramsSchema = this.getParamsSchema(module);
         const sym = this.symtable.get(`module:${moduleRef}`);
         const variableEntries = this.getVariableEntries(module);
-        this.code.line(`let $p = ctx.convertType({
-                $request,
-                ...$request.body,
-                ...$request.query,
+        this.code.line(`const $p = ctx.convertType({
+                ...requestParams,
                 ...pathParams,
                 ...localParams,
                 ${variableEntries.join(',')}
