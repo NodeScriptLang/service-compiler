@@ -21,14 +21,6 @@ export const module: ModuleDefinition<any, any> = {
 
 export const compute = (params: any) => {
     const { $request } = params;
-    if ($request.headers['x-teapot']) {
-        return {
-            $response: {
-                status: 418,
-                body: 'I am a teapot, baby!'
-            },
-        };
-    }
     const auth = $request.headers['authorization']?.[0];
     if (auth !== params.AUTH_TOKEN) {
         const err = new Error('Access Denied') as any;

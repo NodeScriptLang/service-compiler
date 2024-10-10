@@ -7,7 +7,6 @@ export interface ServiceSpec {
 }
 
 export const ServiceSpecSchema = new Schema<ServiceSpec>({
-    id: 'ServiceSpec',
     type: 'object',
     properties: {
         routes: {

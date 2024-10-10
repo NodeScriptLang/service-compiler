@@ -27,7 +27,6 @@ describe('Service Compiler', () => {
                         method: RouteMethod.ANY,
                         path: '/*',
                         moduleRef: 'EchoRoute',
-                        middleware: [],
                     }
                 ]
             };
@@ -60,7 +59,6 @@ describe('Service Compiler', () => {
                         method: RouteMethod.ANY,
                         path: '/variable',
                         moduleRef: 'VariableEcho',
-                        middleware: [],
                     }
                 ]
             };
@@ -80,19 +78,16 @@ describe('Service Compiler', () => {
                     method: RouteMethod.GET,
                     path: '/echo',
                     moduleRef: 'EchoRoute',
-                    middleware: [],
                 },
                 {
                     method: RouteMethod.POST,
                     path: '/echo',
                     moduleRef: 'EchoRoute',
-                    middleware: [],
                 },
                 {
                     method: RouteMethod.ANY,
                     path: '/*',
                     moduleRef: 'NotFoundRoute',
-                    middleware: [],
                 },
             ],
         };
@@ -172,23 +167,21 @@ describe('Service Compiler', () => {
 
     });
 
-    describe('middleware', async () => {
-
-        const service: ServiceSpec = {
-            routes: [
-                {
-                    method: RouteMethod.ANY,
-                    path: '/*',
-                    moduleRef: 'EchoRoute',
-                    middleware: [
-                        { moduleRef: 'AuthMiddleware' },
-                    ]
-                },
-            ],
-        };
+    describe('before hooks', async () => {
 
         it('pass data in locals', async () => {
-            const $request: RequestSpec = {
+            const response = await runtime.invokeService({
+                routes: [
+                    {
+                        method: RouteMethod.ANY,
+                        path: '/*',
+                        moduleRef: 'EchoRoute',
+                        beforeHooks: [
+                            { moduleRef: 'AuthMiddleware' },
+                        ]
+                    },
+                ],
+            }, {
                 method: RequestMethod.GET,
                 path: '/echo',
                 headers: {
@@ -197,42 +190,30 @@ describe('Service Compiler', () => {
                 },
                 query: {},
                 body: {},
-            };
-            const response = await runtime.invokeService(service, $request, {
+            }, {
                 AUTH_TOKEN: 'secret'
             });
-            assert.deepEqual(response, {
-                status: 200,
-                headers: {},
-                body: {
-                    $request,
-                    '*': 'echo',
-                    'authorized': true,
-                    'userId': 'joe',
-                },
-            });
-        });
-
-        it('returns a custom response', async () => {
-            const $request: RequestSpec = {
-                method: RequestMethod.GET,
-                path: '/echo',
-                headers: {
-                    'x-teapot': ['1'],
-                },
-                query: {},
-                body: {},
-            };
-            const response = await runtime.invokeService(service, $request);
-            assert.deepEqual(response, {
-                status: 418,
-                headers: {},
-                body: 'I am a teapot, baby!',
-            });
+            assert.strictEqual(response.status, 200);
+            assert.strictEqual(response.body.authorized, true);
+            assert.strictEqual(response.body.userId, 'joe');
+            // Returned by echo
+            assert.ok(response.body.$request != null);
+            assert.strictEqual(response.body['*'], 'echo');
         });
 
         it('throws the error', async () => {
-            const $request: RequestSpec = {
+            const response = await runtime.invokeService({
+                routes: [
+                    {
+                        method: RouteMethod.ANY,
+                        path: '/*',
+                        moduleRef: 'EchoRoute',
+                        beforeHooks: [
+                            { moduleRef: 'AuthMiddleware' },
+                        ]
+                    },
+                ],
+            }, {
                 method: RequestMethod.GET,
                 path: '/echo',
                 headers: {
@@ -240,8 +221,7 @@ describe('Service Compiler', () => {
                 },
                 query: {},
                 body: {},
-            };
-            const response = await runtime.invokeService(service, $request);
+            });
             assert.deepEqual(response, {
                 status: 403,
                 headers: {
@@ -253,6 +233,70 @@ describe('Service Compiler', () => {
                     details: undefined,
                 },
             });
+        });
+
+    });
+
+    describe('after hooks', async () => {
+
+        it('overwrite the result', async () => {
+            const response = await runtime.invokeService({
+                routes: [
+                    {
+                        method: RouteMethod.ANY,
+                        path: '/*',
+                        moduleRef: 'EchoRoute',
+                        afterHooks: [
+                            { moduleRef: 'AuthMiddleware' },
+                        ]
+                    },
+                ],
+            }, {
+                method: RequestMethod.GET,
+                path: '/echo',
+                headers: {
+                    'authorization': ['secret'],
+                    'x-user-id': ['joe'],
+                },
+                query: {},
+                body: {},
+            }, {
+                AUTH_TOKEN: 'secret'
+            });
+            assert.strictEqual(response.status, 200);
+            assert.strictEqual(response.body.authorized, true);
+            assert.strictEqual(response.body.userId, 'joe');
+            // No longer present
+            assert.strictEqual(response.body.$request, undefined);
+            assert.strictEqual(response.body['*'], undefined);
+        });
+
+    });
+
+    describe('error hook', () => {
+
+        it('handles errors', async () => {
+            const response = await runtime.invokeService({
+                routes: [
+                    {
+                        method: RouteMethod.ANY,
+                        path: '/*',
+                        moduleRef: 'EchoRoute',
+                        beforeHooks: [
+                            { moduleRef: 'AuthMiddleware' },
+                        ],
+                        errorHook: { moduleRef: 'ErrorHandler' },
+                    },
+                ],
+            }, {
+                method: RequestMethod.GET,
+                path: '/echo',
+                headers: {},
+                query: {},
+                body: {},
+            });
+            assert.strictEqual(response.status, 403);
+            assert.strictEqual(response.body, 'Custom error: Access Denied');
         });
 
     });

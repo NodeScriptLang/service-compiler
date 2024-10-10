@@ -32,8 +32,14 @@ export class ServiceCompilerJob {
     private emitModuleImports() {
         for (const route of this.serviceSpec.routes) {
             this.emitModuleImport(route.moduleRef);
-            for (const mw of route.middleware) {
-                this.emitModuleImport(mw.moduleRef);
+            for (const h of route.beforeHooks ?? []) {
+                this.emitModuleImport(h.moduleRef);
+            }
+            for (const h of route.afterHooks ?? []) {
+                this.emitModuleImport(h.moduleRef);
+            }
+            if (route.errorHook) {
+                this.emitModuleImport(route.errorHook.moduleRef);
             }
         }
     }
@@ -77,36 +83,44 @@ export class ServiceCompilerJob {
             // Match path
             this.code.line(`const pathParams = ctx.lib.matchPath(${JSON.stringify(route.path)}, $request.path);`);
             this.code.block(`if (pathParams != null) {`, `}`, () => {
-                this.code.line(`const localParams = {};`);
-                this.code.line(`const requestParams = {
-                    $request,
-                    ...(typeof $request.body === 'object' ? $request.body : {}),
-                    ...$request.query,
-                    ...pathParams,
-                };`);
-                this.code.line(`ctx.setLocal('$route', ${JSON.stringify({
-                    method: route.method,
-                    path: route.path,
-                    moduleRef: route.moduleRef,
-                    ...route.metadata,
-                })})`);
-                for (const mw of route.middleware) {
-                    this.emitMiddlewareHandler(mw.moduleRef);
-                }
-                this.emitRouteHandler(route);
+                this.emitRouteBody(route);
             });
         });
     }
 
-    private emitMiddlewareHandler(moduleRef: string) {
+    private emitRouteBody(route: RouteSpec) {
+        this.code.line(`const localParams = {};`);
+        this.code.line(`const requestParams = {
+            $request,
+            ...(typeof $request.body === 'object' ? $request.body : {}),
+            ...$request.query,
+            ...pathParams,
+        };`);
+        this.code.line(`let $result = undefined;`);
+        this.code.block(`try {`, `}`, () => {
+            for (const h of route.beforeHooks ?? []) {
+                this.emitBeforeHook(h.moduleRef);
+            }
+            this.emitRouteHandler(route);
+            for (const h of route.afterHooks ?? []) {
+                this.emitAfterHook(h.moduleRef);
+            }
+        });
+        this.code.block(`catch ($error) {`, `}`, () => {
+            if (route.errorHook) {
+                this.emitErrorHook(route.errorHook.moduleRef);
+            } else {
+                this.code.line('throw $error;');
+            }
+        });
+        this.code.line(`return $result;`);
+    }
+
+    private emitBeforeHook(moduleRef: string) {
         this.code.block(`{`, `}`, () => {
-            this.code.line(`// Middleware ${moduleRef}`);
+            this.code.line(`// Before Hook ${moduleRef}`);
             this.emitHandlerCompute(moduleRef);
-            // If middleware returns an object with $response, stop processing and return it
-            this.code.block(`if (typeof $r?.response === 'object') {`, `}`, () => {
-                this.code.line('return $r;');
-            });
-            // If middleware returns an object, pass it onwards via local params
+            // If before hook returns an object, pass it onwards via local params
             this.code.block(`if ($r && typeof $r === 'object') {`, `}`, () => {
                 this.code.line(`Object.assign(localParams, $r);`);
             });
@@ -115,23 +129,41 @@ export class ServiceCompilerJob {
 
     private emitRouteHandler(route: RouteSpec) {
         this.code.block(`{`, `}`, () => {
-            this.code.line(`// Route handler ${route.moduleRef}`);
+            this.code.line(`// Route Handler ${route.moduleRef}`);
             this.emitHandlerCompute(route.moduleRef);
-            this.code.line(`return $r;`);
+            this.code.line(`$result = $r;`);
         });
     }
 
-    private emitHandlerCompute(moduleRef: string) {
+    private emitAfterHook(moduleRef: string) {
+        this.code.block(`{`, `}`, () => {
+            this.code.line(`// After Hook ${moduleRef}`);
+            this.emitHandlerCompute(moduleRef, '$result');
+            // After hooks overwrite the result
+            this.code.line(`$result = $r;`);
+        });
+    }
+
+    private emitErrorHook(moduleRef: string) {
+        this.code.block(`{`, `}`, () => {
+            this.code.line(`// Error Hook ${moduleRef}`);
+            this.emitHandlerCompute(moduleRef, '$error');
+            // Error hook overwrites the result
+            this.code.line(`$result = $r;`);
+        });
+    }
+
+    private emitHandlerCompute(moduleRef: string, ...additionalArgs: string[]) {
         const module = this.loader.resolveModule(moduleRef);
         const paramsSchema = this.getParamsSchema(module);
         const sym = this.symtable.get(`module:${moduleRef}`);
         const variableEntries = this.getVariableEntries(module);
+        const args = [...variableEntries, ...additionalArgs];
         this.code.line(`const $p = ctx.convertType({
-                ...requestParams,
-                ...pathParams,
-                ...localParams,
-                ${variableEntries.join(',')}
-            }, ${JSON.stringify(paramsSchema)})`);
+            ...requestParams,
+            ...localParams,
+            ${args.join(',')}
+        }, ${JSON.stringify(paramsSchema)})`);
         this.code.line(`const $r = await ${sym}($p, ctx);`);
     }
 

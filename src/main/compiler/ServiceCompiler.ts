@@ -18,8 +18,14 @@ export class ServiceCompiler {
     ) {
         for (const route of serviceSpec.routes) {
             await this.loader.loadModule(route.moduleRef);
-            for (const mw of route.middleware) {
-                await this.loader.loadModule(mw.moduleRef);
+            for (const h of route.beforeHooks ?? []) {
+                await this.loader.loadModule(h.moduleRef);
+            }
+            for (const h of route.afterHooks ?? []) {
+                await this.loader.loadModule(h.moduleRef);
+            }
+            if (route.errorHook) {
+                await this.loader.loadModule(route.errorHook.moduleRef);
             }
         }
         const job = new ServiceCompilerJob(this.loader, serviceSpec);

@@ -10,7 +10,6 @@ export enum RouteMethod {
 }
 
 export const RouteMethodSchema = new Schema<RouteMethod>({
-    id: 'RouteMethod',
     type: 'string',
     enum: Object.values(RouteMethod),
 });
