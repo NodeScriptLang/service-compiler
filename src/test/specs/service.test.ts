@@ -165,6 +165,27 @@ describe('Service Compiler', () => {
             });
         });
 
+        it('throws an error', async () => {
+            const response = await runtime.invokeService({
+                routes: [
+                    {
+                        method: RouteMethod.GET,
+                        path: '/error',
+                        moduleRef: 'ErrorRoute',
+                    },
+                ],
+            }, {
+                method: RequestMethod.GET,
+                path: '/error',
+                headers: {},
+                query: {},
+                body: {},
+            });
+            assert.strictEqual(response.status, 503);
+            assert.strictEqual(response.body.name, 'Error');
+            assert.strictEqual(response.body.message, 'Something went wrong');
+        });
+
     });
 
     describe('before hooks', async () => {
